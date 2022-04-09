@@ -1,11 +1,13 @@
-from rest_framework import serializers
-from rest_framework.relations import SlugRelatedField
+from rest_framework.exceptions import ValidationError
+from rest_framework.fields import CurrentUserDefault
+from rest_framework.relations import SlugRelatedField, StringRelatedField
+from rest_framework.serializers import ModelSerializer
+from rest_framework.validators import UniqueTogetherValidator
+
+from posts.models import User, Post, Comment, Group, Follow
 
 
-from posts.models import Comment, Post
-
-
-class PostSerializer(serializers.ModelSerializer):
+class PostSerializer(ModelSerializer):
     author = SlugRelatedField(slug_field='username', read_only=True)
 
     class Meta:
@@ -13,11 +15,42 @@ class PostSerializer(serializers.ModelSerializer):
         model = Post
 
 
-class CommentSerializer(serializers.ModelSerializer):
-    author = serializers.SlugRelatedField(
-        read_only=True, slug_field='username'
-    )
+class CommentSerializer(ModelSerializer):
+    author = SlugRelatedField(slug_field='username', read_only=True)
 
     class Meta:
         fields = '__all__'
         model = Comment
+        read_only_fields = ('post',)
+
+
+class GroupSerializer(ModelSerializer):
+
+    class Meta:
+        fields = '__all__'
+        model = Group
+
+
+class FollowSerializer(ModelSerializer):
+    user = StringRelatedField(read_only=True, default=CurrentUserDefault())
+    following = SlugRelatedField(
+        slug_field='username', queryset=User.objects.all()
+    )
+
+    class Meta:
+        fields = ('user', 'following')
+        model = Follow
+        validators = [
+            UniqueTogetherValidator(
+                queryset=model.objects.all(),
+                fields=('user', 'following'),
+                message='Вы уже подписаны на этого автора.'
+            )
+        ]
+
+    def validate(self, data):
+        user = self.context['request'].user
+        following = data['following']
+        if user == following:
+            raise ValidationError('Вы не можете подписаться на самого себя.')
+        return data
