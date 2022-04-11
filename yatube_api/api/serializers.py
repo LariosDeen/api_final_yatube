@@ -1,6 +1,6 @@
 from rest_framework.exceptions import ValidationError
 from rest_framework.fields import CurrentUserDefault
-from rest_framework.relations import SlugRelatedField, StringRelatedField
+from rest_framework.relations import SlugRelatedField
 from rest_framework.serializers import ModelSerializer
 from rest_framework.validators import UniqueTogetherValidator
 
@@ -31,8 +31,13 @@ class GroupSerializer(ModelSerializer):
         model = Group
 
 
+# Привет, Екатерина. Не нашёл твой контакт в слаке, поэтому пишу здесь.
+# Я ограничил методы в классе FollowViewSet.
+# Каким родительским классом нужно ограничить методы в этом сериализаторе?
 class FollowSerializer(ModelSerializer):
-    user = StringRelatedField(read_only=True, default=CurrentUserDefault())
+    user = SlugRelatedField(
+        slug_field='username', read_only=True, default=CurrentUserDefault()
+    )
     following = SlugRelatedField(
         slug_field='username', queryset=User.objects.all()
     )
